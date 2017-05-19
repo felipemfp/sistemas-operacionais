@@ -1,5 +1,10 @@
 CC=gcc
 CFLAGS=-Wall -ansi -I.
+DEPS=shell.h history.h
+OBJ=shell.o history.o
 
-shell: shell.o
-	$(CC) -Wall -ansi -o shell shell.o -I.
+%.o: %.c $(DEPS)
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+shell: $(OBJ)
+	$(CC) -o $@ $^ $(CFLAGS)
