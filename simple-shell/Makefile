@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-I.
+CFLAGS=-Wall -ansi -I.
 
 shell: shell.o
-	$(CC) -o shell shell.o -I.
+	$(CC) -Wall -ansi -o shell shell.o -I.
