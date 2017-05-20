@@ -6,77 +6,121 @@
 #include <string.h>
 #include <errno.h>
 #include <stdarg.h>
-#include <history.h>
 #include <shell.h>
 #include <history.h>
 
-int main() {
+int main()
+{
   struct History history;
   history_init(&history);
 
-  while (1) {
-    int rank = history_end(&history);
+  while (1)
+  {
+    int rank = history_next_rank(&history);
     read_command(&(history.history[rank]));
     history_push(&history);
-    if (handle_command(&(history.history[rank]), &history) == BREAK) break;
+    if (handle_command(&(history.history[rank]), &history) == BREAK)
+      break;
   }
 
   return(0);
 }
 
-void error(char * message) {
+void error(char * message)
+{
   printf("error: %s\n", message);
 }
 
-void print_command(struct Command * cmd) {
+void print_command(struct Command * cmd)
+{
   int i;
-  for (i = 0; i < cmd->argc; i++) {
+  for (i = 0; i < cmd->argc; i++)
+  {
     printf("%s ", cmd->argv[i]);
   }
   printf("\n");
 }
 
-void read_command(struct Command * cmd) {
+void read_command(struct Command * cmd)
+{
   printf("$");
   fgets(cmd->command, COMMAND_SIZE, stdin);
   sscanf(cmd->command, "%[^\n]", cmd->command);
   int i = 0;
   char * token = strtok(cmd->command, " ");
-  while (token != NULL) {
+  while (token != NULL)
+  {
     cmd->argv[i++] = token;
-    if (i == ARGV_SIZE) break;
+    if (i == ARGV_SIZE)
+      break;
     token = strtok(NULL, " ");
   }
   cmd->argv[i] = NULL;
   cmd->argc = i;
 }
 
-int handle_internal_command_cd(struct Command * cmd, struct History * hist) {
-  if (chdir(cmd->argv[1]) == -1) {
+int handle_command(struct Command * cmd, struct History * hist)
+{
+  if (strcmp(cmd->argv[0], EXIT_COMMAND) == 0)
+  {
+    return BREAK;
+  }
+  else if (strcmp(cmd->argv[0], CD_COMMAND) == 0)
+  {
+    return handle_internal_command_cd(cmd, hist);
+  }
+  else if (strcmp(cmd->argv[0], HISTORY_COMMAND) == 0)
+  {
+    return handle_internal_command_history(cmd, hist);
+  }
+  else
+  {
+    return handle_external_command(cmd, hist);
+  }
+}
+
+
+int handle_internal_command_cd(struct Command * cmd, struct History * hist)
+{
+  if (chdir(cmd->argv[1]) == -1)
+  {
     error(strerror(errno));
   }
   return 0;
 }
 
-int handle_internal_command_history(struct Command * cmd, struct History * hist) {
-  if (cmd->argc > 1) {
-    if (strcmp(cmd->argv[1], "-c") == 0) {
+int handle_internal_command_history(struct Command * cmd, struct History * hist)
+{
+  if (cmd->argc > 1)
+  {
+    if (strcmp(cmd->argv[1], "-c") == 0)
+    {
       history_clear(hist);
-    } else if (cmd->argv[1] != NULL) {
+    }
+    else if (cmd->argv[1] != NULL)
+    {
       int offset = atoi(cmd->argv[1]);
-      if ((offset == 0 && strcmp(cmd->argv[1], "0") != 0) || (offset < 0) || (offset > 29) || offset > history_length(hist)) {
+      if ((offset == 0 && strcmp(cmd->argv[1], "0") != 0) ||
+          (offset < 0) ||
+          (offset > history_length(hist)))
+      {
         error("offset invalid");
-      } else {
-        hist->history[history_end(hist)] = hist->history[history_rank(hist, offset)];
+      }
+      else
+      {
+        hist->history[history_next_rank(hist)] = hist->history[history_rank(hist, offset)];
         history_push(hist);
         return handle_command(&(hist->history[history_rank(hist, offset)]), hist);
       }
     }
-  } else {
+  }
+  else
+  {
     int i;
     int start = history_start(hist);
     int length = history_length(hist);
-    for (i = 0; i < length; i++) {
+    for (i = 0; i < length; i++)
+    {
       printf("%2d ", i);
       print_command(&(hist->history[start]));
       start = (start + 1) % HISTORY_SIZE;
@@ -86,31 +130,28 @@ int handle_internal_command_history(struct Command * cmd, struct History * hist)
   return 0;
 }
 
-int handle_external_command(struct Command * cmd, struct History * hist) {
+int handle_external_command(struct Command * cmd, struct History * hist)
+{
   pid_t child_pid = fork();
-  if (child_pid < 0) {
+  if (child_pid < 0)
+  {
     error("can't fork");
-  } else if (child_pid == 0) {
+  }
+  else if (child_pid == 0)
+  {
     _exit(execvp(cmd->argv[0], cmd->argv));
-  } else {
+  }
+  else
+  {
     int status;
-    if (waitpid(child_pid, &status, 0) == -1) {
+    if (waitpid(child_pid, &status, 0) == -1)
+    {
       error(strerror(errno));
-    } else if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
+    }
+    else if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
+    {
       error("command returned a non-zero code");
     }
   }
   return 0;
-}
-
-int handle_command(struct Command * cmd, struct History * hist) {
-  if (strcmp(cmd->argv[0], EXIT_COMMAND) == 0) {
-    return BREAK;
-  } else if (strcmp(cmd->argv[0], CD_COMMAND) == 0) {
-    return handle_internal_command_cd(cmd, hist);
-  } else if (strcmp(cmd->argv[0], HISTORY_COMMAND) == 0) {
-    return handle_internal_command_history(cmd, hist);
-  } else {
-    return handle_external_command(cmd, hist);
-  }
 }
