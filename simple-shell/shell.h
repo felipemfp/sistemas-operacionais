@@ -8,11 +8,13 @@
 #define HISTORY_COMMAND "history"
 
 #define BREAK 127
-#define HISTORY 128
 
 void error(char * message);
 void print_command(struct Command * cmd);
 void read_command(struct Command * cmd);
 int handle_command(struct Command * cmd, struct History * hist);
+int handle_internal_command_cd(struct Command * cmd, struct History * hist);
+int handle_internal_command_history(struct Command * cmd, struct History * hist);
+int handle_external_command(struct Command * cmd, struct History * hist);
 
 #endif

@@ -13,7 +13,3 @@
 **Makefile**
 
 - http://www.cs.colby.edu/maxwell/courses/tutorials/maketutor/
-
-**strsep**
-
-- http://www.manpagez.com/man/3/strsep/
