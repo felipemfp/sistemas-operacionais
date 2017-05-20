@@ -29,10 +29,10 @@ void read_command(struct Command * cmd) {
 
   int i = 0;
   char * token = strtok(cmd->command, " ");
-  while (token != 0) {
+  while (token != NULL) {
     cmd->argv[i++] = token;
     if (i == ARGV_SIZE) break;
-    token = strtok(0, " ");
+    token = strtok(NULL, " ");
   }
 
   cmd->argv[i] = NULL;
@@ -40,7 +40,6 @@ void read_command(struct Command * cmd) {
 }
 
 int handle_command(struct Command * cmd, struct History * hist) {
-
   if (strcmp(cmd->argv[0], EXIT_COMMAND) == 0) return BREAK;
   else if (strcmp(cmd->argv[0], CD_COMMAND) == 0) {
     if (chdir(cmd->argv[1]) == -1) {
@@ -52,12 +51,13 @@ int handle_command(struct Command * cmd, struct History * hist) {
         history_clear(hist);
       } else if (cmd->argv[1] != NULL) {
         int offset = atoi(cmd->argv[1]);
-        if ((offset == 0 && strcmp(cmd->argv[1], "0") != 0) || (offset < 0) || (offset < 29)) {
+        printf("%d\n", offset);
+        if ((offset == 0 && strcmp(cmd->argv[1], "0") != 0) || (offset < 0) || (offset > 29)) {
           error("offset invalid");
         } else if (offset > history_length(hist)) {
           error("offset out of bounds");
         } else {
-          return handle_command(&(hist->history[history_rank(hist, offset)]), hist);
+          handle_command(&(hist->history[history_rank(hist, offset)]), hist);
         }
       }
     } else {
@@ -65,11 +65,12 @@ int handle_command(struct Command * cmd, struct History * hist) {
       int start = history_start(hist);
       int length = history_length(hist);
       for (i = 0; i < length; i++) {
-        printf("%2d. ", start);
+        printf("%2d ", start);
         print_command(&(hist->history[start]));
         start = (start + 1) % HISTORY_SIZE;
       }
     }
+    return HISTORY;
   } else {
     pid_t child_pid = fork();
     if (child_pid < 0) {
@@ -94,10 +95,12 @@ int main() {
   history_init(&history);
 
   while (1) {
+    int r;
     int rank = history_end(&history);
     read_command(&(history.history[rank]));
-    if (handle_command(&(history.history[rank]), &history) == BREAK) break;
-    history_push(&history);
+    r = handle_command(&(history.history[rank]), &history);
+    if (r == BREAK) break;
+    if (r != HISTORY) history_push(&history);
   }
 
   return(0);

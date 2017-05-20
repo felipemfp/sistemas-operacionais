@@ -8,6 +8,7 @@
 #define HISTORY_COMMAND "history"
 
 #define BREAK 127
+#define HISTORY 128
 
 void error(char * message);
 void print_command(struct Command * cmd);
