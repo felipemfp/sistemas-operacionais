@@ -65,7 +65,7 @@ int handle_command(struct Command * cmd, struct History * hist) {
       int start = history_start(hist);
       int length = history_length(hist);
       for (i = 0; i < length; i++) {
-        printf("%2d ", start);
+        printf("%2d ", i);
         print_command(&(hist->history[start]));
         start = (start + 1) % HISTORY_SIZE;
       }
