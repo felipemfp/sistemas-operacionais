@@ -26,11 +26,6 @@ int main()
   return(0);
 }
 
-void error(char * message)
-{
-  printf("error: %s\n", message);
-}
-
 void print_command(struct Command * cmd)
 {
   int i;
@@ -84,7 +79,7 @@ int handle_internal_command_cd(struct Command * cmd, struct History * hist)
 {
   if (chdir(cmd->argv[1]) == -1)
   {
-    error(strerror(errno));
+    error("%s", strerror(errno));
   }
   return 0;
 }
@@ -104,7 +99,7 @@ int handle_internal_command_history(struct Command * cmd, struct History * hist)
           (offset < 0) ||
           (offset > history_length(hist)))
       {
-        error("offset invalid");
+        error("%s", "offset invalid");
       }
       else
       {
@@ -135,22 +130,24 @@ int handle_external_command(struct Command * cmd, struct History * hist)
   pid_t child_pid = fork();
   if (child_pid < 0)
   {
-    error("can't fork");
+    error("%s", "can't fork");
   }
   else if (child_pid == 0)
   {
-    _exit(execvp(cmd->argv[0], cmd->argv));
+    if (execvp(cmd->argv[0], cmd->argv) == -1)
+      _exit(errno);
+    _exit(0);
   }
   else
   {
     int status;
     if (waitpid(child_pid, &status, 0) == -1)
     {
-      error(strerror(errno));
+      error("%s", strerror(errno));
     }
     else if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
     {
-      error("command returned a non-zero code");
+      error("%s %s", cmd->argv[0], "returned a non-zero code");
     }
   }
   return 0;
