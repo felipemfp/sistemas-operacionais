@@ -18,9 +18,10 @@ int main()
   {
     int rank = history_next_rank(&history);
     read_command(&(history.history[rank]));
-    history_push(&history);
     if (handle_command(&(history.history[rank]), &history) == BREAK)
       break;
+    history_push(&history);
+    printf("History length: %d\n", history_length(&history));
   }
 
   return(0);
@@ -95,16 +96,17 @@ int handle_internal_command_history(struct Command * cmd, struct History * hist)
     else if (cmd->argv[1] != NULL)
     {
       int offset = atoi(cmd->argv[1]);
+      printf("offset: %d\nlength: %d\n", offset, history_length(hist));
       if ((offset == 0 && strcmp(cmd->argv[1], "0") != 0) ||
           (offset < 0) ||
-          (offset > history_length(hist)))
+          (offset >= history_length(hist)))
       {
         error("%s", "offset invalid");
       }
       else
       {
-        hist->history[history_next_rank(hist)] = hist->history[history_rank(hist, offset)];
         history_push(hist);
+        hist->history[history_next_rank(hist)] = hist->history[history_rank(hist, offset)];
         return handle_command(&(hist->history[history_rank(hist, offset)]), hist);
       }
     }
@@ -130,12 +132,12 @@ int handle_external_command(struct Command * cmd, struct History * hist)
   pid_t child_pid = fork();
   if (child_pid < 0)
   {
-    error("%s", "can't fork");
+    error("%s", "impossible to fork");
   }
   else if (child_pid == 0)
   {
     if (execvp(cmd->argv[0], cmd->argv) == -1)
-      _exit(errno);
+      error("%s", strerror(errno));
     _exit(0);
   }
   else
