@@ -16,12 +16,13 @@ int main()
 
   while (1)
   {
-    int rank = history_next_rank(&history);
+    int ret, rank = history_next_rank(&history);
     read_command(&(history.history[rank]));
-    if (handle_command(&(history.history[rank]), &history) == BREAK)
+    ret = handle_command(&(history.history[rank]), &history);
+    if (ret == BREAK)
       break;
-    history_push(&history);
-    printf("History length: %d\n", history_length(&history));
+    if (ret != SKIP_HISTORY)
+      history_push(&history);
   }
 
   return(0);
@@ -35,6 +36,22 @@ void print_command(struct Command * cmd)
     printf("%s ", cmd->argv[i]);
   }
   printf("\n");
+}
+
+void read_command_from_string(struct Command * cmd, char command[])
+{
+  strcpy(cmd->command, command);
+  int i = 0;
+  char * token = strtok(cmd->command, " ");
+  while (token != NULL)
+  {
+    cmd->argv[i++] = token;
+    if (i == ARGV_SIZE)
+      break;
+    token = strtok(NULL, " ");
+  }
+  cmd->argv[i] = NULL;
+  cmd->argc = i;
 }
 
 void read_command(struct Command * cmd)
@@ -92,11 +109,11 @@ int handle_internal_command_history(struct Command * cmd, struct History * hist)
     if (strcmp(cmd->argv[1], "-c") == 0)
     {
       history_clear(hist);
+      return SKIP_HISTORY;
     }
     else if (cmd->argv[1] != NULL)
     {
       int offset = atoi(cmd->argv[1]);
-      printf("offset: %d\nlength: %d\n", offset, history_length(hist));
       if ((offset == 0 && strcmp(cmd->argv[1], "0") != 0) ||
           (offset < 0) ||
           (offset >= history_length(hist)))
@@ -105,23 +122,36 @@ int handle_internal_command_history(struct Command * cmd, struct History * hist)
       }
       else
       {
-        history_push(hist);
-        hist->history[history_next_rank(hist)] = hist->history[history_rank(hist, offset)];
+        char command[COMMAND_SIZE];
+        int i, j, l = 0, count = hist->history[history_rank(hist, offset)].argc;
+        for (i = 0; i < count; i++) {
+          for (j = 0; j < strlen(hist->history[history_rank(hist, offset)].argv[i]); j++) {
+            command[l++] = hist->history[history_rank(hist, offset)].argv[i][j];
+          }
+          command[l++] = ' ';
+        }
+        command[l] = '\0';
+
+        read_command_from_string(&(hist->history[history_next_rank(hist)]), command);
         return handle_command(&(hist->history[history_rank(hist, offset)]), hist);
       }
     }
   }
   else
   {
-    int i;
-    int start = history_start(hist);
+    history_push(hist);
     int length = history_length(hist);
-    for (i = 0; i < length; i++)
-    {
-      printf("%2d ", i);
-      print_command(&(hist->history[start]));
-      start = (start + 1) % HISTORY_SIZE;
+    if (length > 0) {
+      int i;
+      int start = history_start(hist);
+      for (i = 0; i < length; i++)
+      {
+        printf("%2d ", i);
+        print_command(&(hist->history[start]));
+        start = (start + 1) % HISTORY_SIZE;
+      }
     }
+    return SKIP_HISTORY;
   }
 
   return 0;
