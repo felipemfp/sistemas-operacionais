@@ -14,9 +14,9 @@
 void print_command(struct Command * cmd);
 void read_command_from_string(struct Command * cmd, char command[]);
 void read_command(struct Command * cmd);
-int handle_command(struct Command * cmd, struct History * hist);
+int handle_command(struct Command * cmd, struct History * hist, char last_command[]);
 int handle_internal_command_cd(struct Command * cmd, struct History * hist);
-int handle_internal_command_history(struct Command * cmd, struct History * hist);
+int handle_internal_command_history(struct Command * cmd, struct History * hist, char last_command[]);
 int handle_external_command(struct Command * cmd, struct History * hist);
 
 #endif

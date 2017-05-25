@@ -12,13 +12,24 @@
 int main()
 {
   struct History history;
+  char last_command[COMMAND_SIZE + 1];
   history_init(&history);
 
   while (1)
   {
     int ret, rank = history_next_rank(&history);
+    if (history_length(&history) == HISTORY_SIZE) {
+      int i, j, l = 0, count = history.history[history_rank(&history, 0)].argc;
+      for (i = 0; i < count; i++) {
+        for (j = 0; j < strlen(history.history[history_rank(&history, 0)].argv[i]); j++) {
+          last_command[l++] = history.history[history_rank(&history, 0)].argv[i][j];
+        }
+        last_command[l++] = ' ';
+      }
+      last_command[l] = '\0';
+    }
     read_command(&(history.history[rank]));
-    ret = handle_command(&(history.history[rank]), &history);
+    ret = handle_command(&(history.history[rank]), &history, last_command);
     if (ret == BREAK)
       break;
     if (ret != SKIP_HISTORY)
@@ -72,7 +83,7 @@ void read_command(struct Command * cmd)
   cmd->argc = i;
 }
 
-int handle_command(struct Command * cmd, struct History * hist)
+int handle_command(struct Command * cmd, struct History * hist, char last_command[])
 {
   if (strcmp(cmd->argv[0], EXIT_COMMAND) == 0)
   {
@@ -84,7 +95,7 @@ int handle_command(struct Command * cmd, struct History * hist)
   }
   else if (strcmp(cmd->argv[0], HISTORY_COMMAND) == 0)
   {
-    return handle_internal_command_history(cmd, hist);
+    return handle_internal_command_history(cmd, hist, last_command);
   }
   else
   {
@@ -102,7 +113,7 @@ int handle_internal_command_cd(struct Command * cmd, struct History * hist)
   return 0;
 }
 
-int handle_internal_command_history(struct Command * cmd, struct History * hist)
+int handle_internal_command_history(struct Command * cmd, struct History * hist, char last_command[])
 {
   if (cmd->argc > 1)
   {
@@ -122,18 +133,23 @@ int handle_internal_command_history(struct Command * cmd, struct History * hist)
       }
       else
       {
-        char command[COMMAND_SIZE];
-        int i, j, l = 0, count = hist->history[history_rank(hist, offset)].argc;
-        for (i = 0; i < count; i++) {
-          for (j = 0; j < strlen(hist->history[history_rank(hist, offset)].argv[i]); j++) {
-            command[l++] = hist->history[history_rank(hist, offset)].argv[i][j];
-          }
-          command[l++] = ' ';
+        if (history_length(hist) == HISTORY_SIZE && offset == 0) {
+          read_command_from_string(&(hist->history[history_next_rank(hist)]), last_command);
         }
-        command[l] = '\0';
+        else {
+          char command[COMMAND_SIZE + 1];
+          int i, j, l = 0, count = hist->history[history_rank(hist, offset)].argc;
+          for (i = 0; i < count; i++) {
+            for (j = 0; j < strlen(hist->history[history_rank(hist, offset)].argv[i]); j++) {
+              command[l++] = hist->history[history_rank(hist, offset)].argv[i][j];
+            }
+            command[l++] = ' ';
+          }
+          command[l] = '\0';
+          read_command_from_string(&(hist->history[history_next_rank(hist)]), command);
+        }
 
-        read_command_from_string(&(hist->history[history_next_rank(hist)]), command);
-        return handle_command(&(hist->history[history_rank(hist, offset)]), hist);
+        return handle_command(&(hist->history[history_next_rank(hist)]), hist, NULL);
       }
     }
   }
